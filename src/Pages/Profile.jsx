@@ -1,7 +1,12 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
 import { getAuth, updateProfile, signOut } from "firebase/auth";
 import { db } from "../Firebase/FirebaseConfig";
-import { ref, uploadBytesResumable, getDownloadURL, getStorage } from "firebase/storage";
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  getStorage,
+} from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
@@ -15,62 +20,62 @@ import "swiper/css/pagination";
 
 function Profile() {
   const { User } = useContext(AuthContext);
+
   const [profilePic, setProfilePic] = useState("");
   const [newProfielPicURL, setNewProfielPicURL] = useState("");
   const [newProfielPic, setNewProfielPic] = useState("");
   const [isUserNameChanged, setIsUserNameChanged] = useState(false);
   const [userName, setUserName] = useState("");
   const [isMyListUpdated, setisMyListUpdated] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
     if (User != null) {
+      console.log(User.photoURL, "hello");
       setProfilePic(User.photoURL);
     }
-  }, [User]);
+  }, []);
 
   const inputRef = useRef(null);
 
   const handleClick = () => {
-    inputRef.current.click(); // Trigger file selection
+    inputRef.current.click();
   };
+
+  function notify() {
+    toast.success("  Data Updated Sucessfuly  ");
+  }
 
   const handleFileChange = (event) => {
     const fileObj = event.target.files[0];
     setNewProfielPic(fileObj);
-    setNewProfielPicURL(URL.createObjectURL(fileObj)); // Preview the image
+    setNewProfielPicURL(URL.createObjectURL(fileObj));
     if (!fileObj) {
       return;
     }
+    console.log("fileObj is", fileObj);
+    event.target.value = null;
   };
-
-  function notify() {
-    toast.success("Data Updated Successfully");
-  }
 
   const changeUserName = (e) => {
     e.preventDefault();
-
-    const auth = getAuth();
-    const user = auth.currentUser;
-    console.log("User Name:", userName);
-    console.log("Profile Picture:", newProfielPic);
-
-    // First update the username if it's changed
-    if (isUserNameChanged && userName !== "") {
-      console.log("Updating userName...");
-      updateProfile(user, { displayName: userName })
-        .then(() => {
-          notify();
-          console.log("UserName updated");
-        })
-        .catch((error) => {
-          alert(error.message);
-        });
+    if (isUserNameChanged) {
+      if (userName !== "") {
+        const auth = getAuth();
+        updateProfile(auth.currentUser, { displayName: userName })
+          .then(() => {
+            notify();
+          })
+          .catch((error) => {
+            alert(error.message);
+          });
+      } else {
+        setIsUserNameChanged(false);
+      }
     }
 
-    // Then update the profile picture if there's a new one
-    if (newProfielPic !== "") {
+    if (newProfielPic != "") {
       const storage = getStorage();
       const storageRef = ref(storage, `/ProfilePics/${User.uid}`);
       const uploadTask = uploadBytesResumable(storageRef, newProfielPic);
@@ -81,20 +86,20 @@ function Profile() {
           const prog = Math.round(
             (snapshot.bytesTransferred / snapshot.totalBytes) * 100
           );
-          console.log(`Upload Progress: ${prog}%`);
         },
         (error) => {
           alert(error.message);
+          alert(error.code);
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((url) => {
-            console.log("Profile picture uploaded. URL: ", url);
+            console.log(url, "This is the new Url for Profile Pic");
             setProfilePic(url);
-            updateProfile(user, { photoURL: url })
+            const auth = getAuth();
+            updateProfile(auth.currentUser, { photoURL: url })
               .then(() => {
                 notify();
                 setisMyListUpdated(true);
-                console.log("Profile picture updated");
               })
               .catch((error) => {
                 alert(error.message);
@@ -102,20 +107,15 @@ function Profile() {
           });
         }
       );
-    } else {
-      setisMyListUpdated(true); // If no new picture, just update user info
-      console.log("No new profile picture, just username update.");
     }
   };
 
   const updateProfilePic = (imageURL) => {
     const auth = getAuth();
-    const user = auth.currentUser;
-    updateProfile(user, { photoURL: imageURL })
+    updateProfile(auth.currentUser, { photoURL: imageURL })
       .then(() => {
-        setProfilePic(imageURL);
+        setProfilePic(User.photoURL);
         notify();
-        console.log("Profile picture updated from preset images");
       })
       .catch((error) => {
         alert(error.message);
@@ -159,21 +159,30 @@ function Profile() {
             </h1>
             <div className="flex justify-center flex-col items-center md:flex-row md:items-start">
               <img
-                className="h-28 w-28 rounded-full cursor-pointer mb-3 md:mr-16"
-                src={profilePic || "https://www.citypng.com/public/uploads/preview/profile-user-round-red-icon-symbol-download-png-11639594337tco5j3n0ix.png"}
-                alt="Profile"
+                className={
+                  profilePic
+                    ? "h-28 w-28 rounded-full cursor-pointer mb-3 md:mr-16"
+                    : "h-28 w-28 rounded-full cursor-pointer mb-3 md:mr-16"
+                }
+                src={
+                  profilePic
+                    ? `${profilePic}`
+                    : `https://www.citypng.com/public/uploads/preview/profile-user-round-red-icon-symbol-download-png-11639594337tco5j3n0ix.png`
+                }
+                alt="NETFLIX"
               />
               <div>
-                <hr className="mb-2 h-px bg-gray-500 border-0 dark:bg-gray-700" />
-                <h1 className="text-white text-lg font-medium mb-2">User Name</h1>
+                <hr className="mb-2 h-px bg-gray-500 border-0 dark:bg-gray-700"></hr>
+                <h1 className="text-white text-lg font-medium mb-2">
+                  User Name
+                </h1>
                 <input
                   type="text"
-                  onChange={(e) => {
-                    setUserName(e.target.value);
-                    setIsUserNameChanged(true);
-                  }}
+                  onChange={(e) =>
+                    setUserName(e.target.value) || setIsUserNameChanged(true)
+                  }
                   className="block w-full rounded-md bg-stone-900 text-white border-gray-300 p-2 mb-6 focus:border-indigo-500 focus:ring-indigo-500 sm:text-base"
-                  placeholder={User ? User.displayName : "Enter your name"}
+                  placeholder={User ? User.displayName : null}
                 />
                 <h1 className="text-white text-lg font-medium mb-2">Email</h1>
                 <h1 className="text-white text-xl bg-stone-900 p-2 rounded mb-4 md:pr-52">
@@ -182,33 +191,47 @@ function Profile() {
                 <h1 className="text-white text-xl p-2 rounded mb-4">
                   Unique ID : {User ? User.uid : null}
                 </h1>
-                <hr className="h-px bg-gray-500 border-0 mb-4 md:mb-10 dark:bg-gray-700" />
+                <hr className="h-px bg-gray-500 border-0 mb-4 md:mb-10 dark:bg-gray-700"></hr>
 
-                <h1 className="text-white text-lg font-medium mb-4">Who is Watching?</h1>
+                <h1 className="text-white text-lg font-medium mb-4">
+                  Who is Watching ?
+                </h1>
                 <div className="flex justify-between cursor-pointer mb-4 md:mb-8">
                   <img
-                    onClick={() => updateProfilePic("https://i.pinimg.com/originals/ba/2e/44/ba2e4464e0d7b1882cc300feceac683c.png")}
+                    onClick={() =>
+                      updateProfilePic(
+                        "https://i.pinimg.com/originals/ba/2e/44/ba2e4464e0d7b1882cc300feceac683c.png"
+                      )
+                    }
                     className="w-16 h-16 rounded-md cursor-pointer"
                     src="https://i.pinimg.com/originals/ba/2e/44/ba2e4464e0d7b1882cc300feceac683c.png"
-                    alt="Profile Option"
                   />
                   <img
-                    onClick={() => updateProfilePic("https://i.pinimg.com/736x/db/70/dc/db70dc468af8c93749d1f587d74dcb08.jpg")}
+                    onClick={() =>
+                      updateProfilePic(
+                        "https://i.pinimg.com/736x/db/70/dc/db70dc468af8c93749d1f587d74dcb08.jpg"
+                      )
+                    }
                     className="w-16 h-16 rounded-md cursor-pointer"
                     src="https://i.pinimg.com/736x/db/70/dc/db70dc468af8c93749d1f587d74dcb08.jpg"
-                    alt="Profile Option"
                   />
                   <img
-                    onClick={() => updateProfilePic("https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png")}
+                    onClick={() =>
+                      updateProfilePic(
+                        "https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png"
+                      )
+                    }
                     className="w-16 h-16 rounded-md cursor-pointer"
                     src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png"
-                    alt="Profile Option"
                   />
                   <img
-                    onClick={() => updateProfilePic("https://ih0.redbubble.net/image.618363037.0853/flat,1000x1000,075,f.u2.jpg")}
+                    onClick={() =>
+                      updateProfilePic(
+                        "https://ih0.redbubble.net/image.618363037.0853/flat,1000x1000,075,f.u2.jpg"
+                      )
+                    }
                     className="w-16 h-16 rounded-md cursor-pointer"
                     src="https://ih0.redbubble.net/image.618363037.0853/flat,1000x1000,075,f.u2.jpg"
-                    alt="Profile Option"
                   />
                   <input
                     style={{ display: "none" }}
@@ -232,13 +255,15 @@ function Profile() {
                     />
                   </svg>
                 </div>
-                {newProfielPicURL && <img className="h-30 w-72" src={newProfielPicURL} alt="Preview" />}
+                {newProfielPicURL ? (
+                  <img className="h-30 w-72" src={newProfielPicURL} />
+                ) : null}
               </div>
             </div>
             <div className="flex justify-between mt-4">
               <button
                 onClick={SignOut}
-                className="flex items-center border-[0.7px] border-white text-white font-medium sm:font-bold text-xs px-14 md:px-24 md:text-xl py-3 rounded shadow hover:shadow-lg hover:bg-white hover:border-white hover:text-red-700 outline-none focus:outline-none mr-3 mb-1 ease-linear transition-all duration-150"
+                className="flex items-center border-[0.7px] border-white text-white font-medium sm:font-bold text-xs px-14 md:px-24 md:text-xl  py-3 rounded shadow hover:shadow-lg hover:bg-white hover:border-white hover:text-red-700 outline-none focus:outline-none mr-3 mb-1 ease-linear transition-all duration-150"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -256,10 +281,10 @@ function Profile() {
                 </svg>
                 SignOut
               </button>
-              {(userName !== "" || newProfielPic !== "") && (
+              {userName != "" || newProfielPic != "" ? (
                 <button
                   onClick={changeUserName}
-                  className="flex items-center bg-red-700 text-white font-medium sm:font-bold text-xs px-10 md:px-16 md:text-xl py-3 rounded shadow hover:shadow-lg hover:bg-white hover:text-red-700 outline-none focus:outline-none mr-3 mb-1 ease-linear transition-all duration-150"
+                  className="flex items-center bg-red-700 text-white font-medium sm:font-bold text-xs px-10 md:px-16 md:text-xl  py-3 rounded shadow hover:shadow-lg hover:bg-white hover:text-red-700 outline-none focus:outline-none mr-3 mb-1 ease-linear transition-all duration-150"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -272,10 +297,31 @@ function Profile() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.630-3."
+                      d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"
                     />
                   </svg>
-                  Save Changes
+                  Save and continue
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate("/")}
+                  className="flex items-center bg-red-700 text-white font-medium sm:font-bold text-xs px-10 md:px-16 md:text-xl  py-3 rounded shadow hover:shadow-lg hover:bg-white hover:text-red-700 outline-none focus:outline-none mr-3 mb-1 ease-linear transition-all duration-150"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-6 h-6 mr-2"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                    />
+                  </svg>
+                  Back to Home
                 </button>
               )}
             </div>
